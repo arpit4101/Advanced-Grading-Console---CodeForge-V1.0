@@ -1,2 +1,2 @@
 # Advanced-Grading-Console---CodeForge-V1.0
-professional-grade, interactive grading console built for the BITS Pilani CodeForge V1.0 competition, featuring real-time analytics, automated relative grading, and secure data exports.
+A robust, production-ready Advanced Grading Console engineered to streamline academic evaluation. Built for the BITS Pilani CodeForge V1.0 competition, this tool transforms raw student data into actionable insights through dynamic relative grading algorithms, 1224 standard competition ranking, real-time visual analytics, and privacy-safe data exports. Designed with a product-first mindset to make the grading experience faster, clearer, and more intuitive for educators.
