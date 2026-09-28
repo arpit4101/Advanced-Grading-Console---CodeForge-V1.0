@@ -344,10 +344,34 @@
       gap: 12px;
     }
 
+    .grade-inputs>div {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
     .grade-inputs select {
-      padding: 6px 10px;
-      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
+      padding: 4px 20px 4px 8px;
+      /* 20px right padding clears the arrow */
+      font-size: 13px;
       text-align: center;
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: var(--surface);
+      /* Custom Lucide-style chevron */
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+      background-repeat: no-repeat;
+      background-position: right 4px center;
+      background-size: 14px;
+    }
+
+    .grade-inputs select::-ms-expand {
+      display: none;
     }
 
     /* ===== STUDENT LIST ===== */
