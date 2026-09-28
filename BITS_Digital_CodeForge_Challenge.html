@@ -522,6 +522,9 @@
 
     <!-- SETUP CONTROLS -->
     <div class="controls-card">
+      <div id="uploadError" class="alert alert-error hidden" style="margin-bottom: 20px;">
+        <i data-lucide="alert-triangle"></i> <span></span>
+      </div>
       <div class="controls-grid">
         <div class="input-group">
           <label for="instructor">Instructor Name</label>
@@ -700,6 +703,7 @@
     const elCourse = document.getElementById("course");
     const elInstructor = document.getElementById("instructor");
     const elDashboard = document.getElementById("mainDashboard");
+    const elUploadError = document.getElementById("uploadError");
 
     const elMethodology = document.getElementById("gradingMethodology");
     const elRelativeInfo = document.getElementById("relativeModeInfo");
@@ -719,6 +723,79 @@
     /* =========================================
        FILE PARSING & INITIALIZATION
     ========================================= */
+    function showUploadError(msg) {
+      const span = elUploadError.querySelector("span");
+      span.innerHTML = msg;
+      elUploadError.classList.remove("hidden");
+      lucide.createIcons(); // Ensure the alert icon renders
+    }
+
+    function hideUploadError() {
+      elUploadError.classList.add("hidden");
+    }
+
+    function validateUploadData(rawData) {
+      if (!rawData || rawData.length === 0) {
+        return "The uploaded file appears to be empty or contains no valid data rows. Please check the file and try again.";
+      }
+
+      // 1. Column Schema Verification
+      let hasId = false, hasCourse = false, hasMarks = false;
+      const allKeys = new Set();
+      rawData.forEach(row => Object.keys(row).forEach(k => allKeys.add(k.trim().toLowerCase())));
+
+      for (const k of allKeys) {
+        if (k.includes("bits id") || k === "id") hasId = true;
+        if (k.includes("course")) hasCourse = true;
+        if (k.includes("total marks") || k.includes("marks") || k.includes("score") || k.includes("total")) hasMarks = true;
+      }
+
+      if (!hasId) return "<strong>Schema Error:</strong> Missing expected column for 'Student's BITS ID'. Please ensure the column header exists.";
+      if (!hasCourse) return "<strong>Schema Error:</strong> Missing expected column for 'Course'. Please ensure the column header exists.";
+      if (!hasMarks) return "<strong>Schema Error:</strong> Missing expected column for 'Total Marks (out of 100)'. Please ensure the column header exists.";
+
+      // 2 & 3. Row-by-Row Validation
+      for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
+        const rowNum = i + 2; // +1 for zero-index, +1 for header row
+
+        const getVal = (target) => {
+          const k = Object.keys(row).find(key => key.trim().toLowerCase().includes(target.toLowerCase()));
+          return k ? row[k] : undefined;
+        };
+
+        const rawId = getVal("BITS ID") ?? getVal("ID") ?? row["BITS ID"];
+        const rawCourse = getVal("Course") ?? row["Course"];
+        const rawMarks = getVal("Total Marks") ?? getVal("Marks") ?? getVal("Score") ?? getVal("Total");
+
+        // Empty field detection
+        if (rawId === undefined || rawId === null || String(rawId).trim() === "") {
+          return `<strong>Row ${rowNum} Error:</strong> Student's BITS ID is missing or completely blank. Please fill in the missing information.`;
+        }
+        if (rawCourse === undefined || rawCourse === null || String(rawCourse).trim() === "") {
+          return `<strong>Row ${rowNum} Error:</strong> The Course field is missing or completely blank. Please fill in the missing information.`;
+        }
+        if (rawMarks === undefined || rawMarks === null || String(rawMarks).trim() === "") {
+          return `<strong>Row ${rowNum} Error:</strong> The Total Marks field is missing or completely blank. Please fill in the missing information.`;
+        }
+
+        // Type and Value Checking
+        if (typeof rawMarks === 'string' && isNaN(Number(rawMarks))) {
+          return `<strong>Row ${rowNum} Error:</strong> Total Marks must be a numerical value. Found invalid text value: "${rawMarks}".`;
+        }
+
+        const marksNum = Number(rawMarks);
+        if (!Number.isInteger(marksNum)) {
+          return `<strong>Row ${rowNum} Error:</strong> Total Marks must be a whole number (Integer). Found decimal value: ${rawMarks}.`;
+        }
+        if (marksNum < 0 || marksNum > 100) {
+          return `<strong>Row ${rowNum} Error:</strong> Total Marks should logically fall between 0 and 100. Found invalid mark: ${marksNum}.`;
+        }
+      }
+
+      return null;
+    }
+
     elFile.addEventListener("change", (e) => {
       if (!e.target.files.length) return;
 
@@ -729,6 +806,20 @@
         try {
           const wb = XLSX.read(ev.target.result, { type: "binary" });
           const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+          // ----------------------------------------------------
+          // FRONT-LINE DATA VALIDATION GATEKEEPER
+          // ----------------------------------------------------
+          const validationError = validateUploadData(rawData);
+          if (validationError) {
+            showUploadError(validationError);
+            elFile.value = ""; // Reset the file input
+            elCourse.disabled = true;
+            elCourse.innerHTML = '<option value="">Upload a valid file first...</option>';
+            elDashboard.classList.add("hidden"); // Ensure dashboard is hidden
+            return; // Halt parsing immediately
+          }
+          hideUploadError();
 
           // Robust Parsing
           globalData = rawData.map(row => {
